@@ -599,11 +599,12 @@ async def cmd_cancelgame(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("Only the game host or group admins can cancel this game.")
             return
 
-    for job_name in ("night_timeout", "day_end", "heal_timeout", "lobby_timeout", "duel_timeout"):
-        job_name_full = f"{job_name}_{chat_id}"
-        existing = context.job_queue.get_jobs_by_name(job_name_full)
-        for j in existing:
-            j.schedule_removal()
+    if context.job_queue:
+        for job_name in ("night_timeout", "day_end", "heal_timeout", "lobby_timeout", "duel_timeout"):
+            job_name_full = f"{job_name}_{chat_id}"
+            existing = context.job_queue.get_jobs_by_name(job_name_full)
+            for j in existing:
+                j.schedule_removal()
 
     _cleanup_game(game)
     del GAMES[chat_id]
