@@ -881,6 +881,15 @@ async def lobby_timeout_callback(context: ContextTypes.DEFAULT_TYPE):
     if not game or game.phase != "lobby" or game.is_duel:
         return
     try:
+        lid = game.lobby_message_id
+        if lid:
+            await context.bot.edit_message_text(
+                chat_id=chat_id, message_id=lid,
+                text="⏰ Lobby closed \u2014 no one started the game in 5 minutes.",
+            )
+    except TelegramError:
+        pass
+    try:
         await context.bot.send_message(chat_id, "⏰ No one started the game. Lobby closed after 5 minutes.")
     except TelegramError:
         pass
