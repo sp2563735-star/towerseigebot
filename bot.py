@@ -59,7 +59,7 @@ async def _send_banner(context, chat_id, url, caption, parse_mode="Markdown"):
 
 def _hp_bar(hp, width=10):
     filled = max(0, min(width, round((hp / 100) * width)))
-    return "\u2588" * filled + "\u2591" * (width - filled)
+    return chr(9608) * filled + chr(9617) * (width - filled)
 
 
 def _mention(uid, name):
@@ -123,8 +123,8 @@ def _class_remaining(game, p, state, class_name):
 
 def _soldier_label(p, idx):
     if p.soldier_is_forced_rest(idx):
-        return f"🔒 Soldier {idx+1} (forced rest)"
-    return f"🪖 Soldier {idx+1} (ready)"
+        return f"Lock Soldier {idx+1} (forced rest)"
+    return f"Soldier {idx+1} (ready)"
 
 
 # ---------------------------------------------------------------------------
@@ -142,11 +142,12 @@ async def send_main_menu(context, game, p, edit_message=None):
 
     lines = []
     if submitted_moves:
-        lines.append("🔒 *Moves locked in*")
+        lines.append("Moves locked in")
     else:
-        lines.append(f"🌙 *Night {game.day_number} \u2014 Choose your moves*")
+        lines.append(f"Night {game.day_number} - Choose your moves")
         lines.append(f"Slots left: {slots_left}/{MAX_MOVES_PER_NIGHT}")
-        lines.append(f"Moves chosen: {', '.join(MOVES[a['move_id']]['name'] for a in state['moves']) or 'none'}")
+        chosen = ', '.join(MOVES[a['move_id']]['name'] for a in state['moves']) if state['moves'] else 'none'
+        lines.append(f"Moves chosen: {chosen}")
 
     text = "\n".join(lines)
     buttons = []
@@ -160,10 +161,10 @@ async def send_main_menu(context, game, p, edit_message=None):
                 if p.move_uses.get(mid, 0) > 0 and not any(a["move_id"] == mid for a in state.get("moves", [])):
                     remaining += 1
             if remaining == 0 or slots_left <= 0:
-                label = f"\u26e8\ufe0f {cls_name} (used)" if remaining == 0 else f"\u26e8\ufe0f {cls_name}"
+                label = f"{cls_name} (used)" if remaining == 0 else f"{cls_name}"
                 class_buttons.append(InlineKeyboardButton(label, callback_data="mv_na:none"))
             else:
-                label = f"\u26e8\ufe0f {cls_name} ({remaining})"
+                label = f"{cls_name} ({remaining})"
                 class_buttons.append(InlineKeyboardButton(label, callback_data=f"cls:{cls_name}"))
         buttons.extend(_rows(class_buttons, 3))
 
@@ -172,32 +173,32 @@ async def send_main_menu(context, game, p, edit_message=None):
             if submitted_soldiers:
                 continue
             if p.soldier_is_forced_rest(idx):
-                soldier_buttons.append(InlineKeyboardButton(f"🔒 Soldier {idx+1} (forced rest)", callback_data=f"sld_na:{idx}"))
+                soldier_buttons.append(InlineKeyboardButton(f"Lock Soldier {idx+1} (forced rest)", callback_data=f"sld_na:{idx}"))
             elif idx in soldier_state:
-                soldier_buttons.append(InlineKeyboardButton(f"🔒 Soldier {idx+1} (assigned)", callback_data=f"sld_na:{idx}"))
+                soldier_buttons.append(InlineKeyboardButton(f"Lock Soldier {idx+1} (assigned)", callback_data=f"sld_na:{idx}"))
             else:
-                soldier_buttons.append(InlineKeyboardButton(f"🪖 Soldier {idx+1} (ready)", callback_data=f"sld_pick:{idx}"))
+                soldier_buttons.append(InlineKeyboardButton(f"Soldier {idx+1} (ready)", callback_data=f"sld_pick:{idx}"))
         buttons.extend(_rows(soldier_buttons, 3))
     else:
-        text += "\n\n\u2694\ufe0f *Soldiers:*"
+        text += "\n\nSoldiers:"
 
     if not submitted_soldiers and not submitted_moves:
-        buttons.append([InlineKeyboardButton(f"\u2705 Submit moves ({len(state['moves'])}/{MAX_MOVES_PER_NIGHT})", callback_data="donenight")])
+        buttons.append([InlineKeyboardButton(f"Submit moves ({len(state['moves'])}/{MAX_MOVES_PER_NIGHT})", callback_data="donenight")])
 
     if not submitted_soldiers and submitted_moves:
         soldier_buttons2 = []
         for idx in range(SOLDIER_COUNT):
             if p.soldier_is_forced_rest(idx):
-                soldier_buttons2.append(InlineKeyboardButton(f"🔒 Soldier {idx+1} (forced rest)", callback_data=f"sld_na:{idx}"))
+                soldier_buttons2.append(InlineKeyboardButton(f"Lock Soldier {idx+1} (forced rest)", callback_data=f"sld_na:{idx}"))
             elif idx in soldier_state:
-                soldier_buttons2.append(InlineKeyboardButton(f"🔒 Soldier {idx+1} (assigned)", callback_data=f"sld_na:{idx}"))
+                soldier_buttons2.append(InlineKeyboardButton(f"Lock Soldier {idx+1} (assigned)", callback_data=f"sld_na:{idx}"))
             else:
-                soldier_buttons2.append(InlineKeyboardButton(f"🪖 Soldier {idx+1} (ready)", callback_data=f"sld_pick:{idx}"))
+                soldier_buttons2.append(InlineKeyboardButton(f"Soldier {idx+1} (ready)", callback_data=f"sld_pick:{idx}"))
         buttons.extend(_rows(soldier_buttons2, 3))
-        buttons.append([InlineKeyboardButton("\u2705 Lock in soldiers", callback_data="sld_submit")])
+        buttons.append([InlineKeyboardButton("Lock in soldiers", callback_data="sld_submit")])
 
     if p.bonus_restores > 0:
-        buttons.append([InlineKeyboardButton(f"\u2728 Restore moves ({p.bonus_restores}/2)", callback_data="bonus_menu")])
+        buttons.append([InlineKeyboardButton(f"Restore moves ({p.bonus_restores}/2)", callback_data="bonus_menu")])
 
     markup = InlineKeyboardMarkup(buttons) if buttons else None
     try:
@@ -209,7 +210,7 @@ async def send_main_menu(context, game, p, edit_message=None):
         try:
             await context.bot.send_message(
                 game.chat_id,
-                f"\u26a0\ufe0f Couldn't DM {p.name} \u2014 they need to start a private chat with me first!"
+                f"Couldn't DM {p.name} - they need to start a private chat with me first!"
             )
         except TelegramError:
             pass
@@ -232,14 +233,14 @@ async def send_class_menu(context, game, p, class_name, edit_message):
         if used_up:
             label += " (used up)"
         elif already_picked:
-            label += " \u2714\ufe0f"
+            label += " [X]"
         if disabled:
             move_buttons.append(InlineKeyboardButton(label, callback_data=f"mv_na:{mid}"))
         else:
             move_buttons.append(InlineKeyboardButton(label, callback_data=f"mv:{mid}"))
     buttons = _rows(move_buttons, 2)
-    buttons.append([InlineKeyboardButton("\u00ab Back", callback_data="backmenu")])
-    text = f"*{class_name}* \u2014 pick a move ({len(state['moves'])}/{MAX_MOVES_PER_NIGHT} used)"
+    buttons.append([InlineKeyboardButton("Back", callback_data="backmenu")])
+    text = f"*{class_name}* - pick a move ({len(state['moves'])}/{MAX_MOVES_PER_NIGHT} used)"
     await edit_message.edit_text(text, reply_markup=InlineKeyboardMarkup(buttons), parse_mode="Markdown")
 
 
@@ -247,25 +248,25 @@ async def send_soldier_menu(context, game, p, edit_message):
     uid = p.user_id
     state = SOLDIER_PENDING.setdefault(uid, {})
     ready_buttons = []
-    lines = ["🤪 *Command your soldiers*", ""]
+    lines = ["*Command your soldiers*", ""]
     for idx in range(SOLDIER_COUNT):
         if p.soldier_is_forced_rest(idx):
-            lines.append(f"🔒 Soldier {idx+1} \u2014 forced rest tonight")
+            lines.append(f"Lock Soldier {idx+1} - forced rest tonight")
             continue
         dest = state.get(idx)
         if dest is not None:
             if dest == "home":
-                lines.append(f"🔒 Soldier {idx+1} \u2014 Defending home")
+                lines.append(f"Lock Soldier {idx+1} - Defending home")
             elif dest == "idle":
-                lines.append(f"🔒 Soldier {idx+1} \u2014 Resting")
+                lines.append(f"Lock Soldier {idx+1} - Resting")
             else:
                 tgt = game.players.get(dest)
-                lines.append(f"🔒 Soldier {idx+1} \u2014 Attacking {tgt.name if tgt else '???'}")
+                lines.append(f"Lock Soldier {idx+1} - Attacking {tgt.name if tgt else '???'}")
         else:
-            lines.append(f"Soldier {idx+1} \u2014 \u26a1 Ready")
+            lines.append(f"Soldier {idx+1} - Ready")
             ready_buttons.append(InlineKeyboardButton(f"Soldier {idx+1}", callback_data=f"sld_pick:{idx}"))
     buttons = _rows(ready_buttons, 3)
-    buttons.append([InlineKeyboardButton("\u2705 Lock in soldiers", callback_data="sld_submit")])
+    buttons.append([InlineKeyboardButton("Lock in soldiers", callback_data="sld_submit")])
     text = "\n".join(lines)
     await edit_message.edit_text(text, reply_markup=InlineKeyboardMarkup(buttons), parse_mode="Markdown")
 
@@ -282,20 +283,20 @@ async def send_soldier_deploy_menu(edit_message, game, p, idx):
             target_counts[v] = target_counts.get(v, 0) + 1
     home_disabled = home_count >= MAX_SOLDIER_DEFENSE
     buttons = [
-        [InlineKeyboardButton(f"🏠 Defend Home{' (full)' if home_disabled else ''}", callback_data=f"sld_na:cap" if home_disabled else f"sld_home:{idx}"),
-         InlineKeyboardButton("💤 Rest", callback_data=f"sld_rest:{idx}")],
+        [InlineKeyboardButton(f"Defend Home{' (full)' if home_disabled else ''}", callback_data=f"sld_na:cap" if home_disabled else f"sld_home:{idx}"),
+         InlineKeyboardButton("Rest", callback_data=f"sld_rest:{idx}")],
     ]
     attack_buttons = []
     for t in _alive_targets(game, {uid}):
         cnt = target_counts.get(t.user_id, 0)
         if cnt >= MAX_SOLDIER_PER_TARGET:
-            attack_buttons.append(InlineKeyboardButton(f"🔒 Attack {t.name} (full)", callback_data="sld_na:cap"))
+            attack_buttons.append(InlineKeyboardButton(f"Attack {t.name} (full)", callback_data="sld_na:cap"))
         else:
-            attack_buttons.append(InlineKeyboardButton(f"\u2694\ufe0f Attack {t.name}", callback_data=f"sld_atk:{idx}:{t.user_id}"))
+            attack_buttons.append(InlineKeyboardButton(f"Attack {t.name}", callback_data=f"sld_atk:{idx}:{t.user_id}"))
     buttons.extend(_rows(attack_buttons, 2))
-    buttons.append([InlineKeyboardButton("\u00ab Back", callback_data="sld_back")])
+    buttons.append([InlineKeyboardButton("Back", callback_data="sld_back")])
     await edit_message.edit_text(
-        f"Soldier {idx+1} \u2014 where to send them?",
+        f"Soldier {idx+1} - where to send them?",
         reply_markup=InlineKeyboardMarkup(buttons),
     )
 
@@ -306,12 +307,12 @@ async def send_alliance_menu(context, game, p, edit_message=None):
     if not a or a.head_id != uid:
         return
 
-    lines = ["🤝 *Alliance Command*", ""]
+    lines = ["*Alliance Command*", ""]
     lines.append(f"Alliance with {', '.join(game.players[m].name for m in a.members if m != uid)}")
     lines.append("")
 
     if p.alliance_submitted:
-        lines.append("🔒 *Alliance moves locked in*")
+        lines.append("*Alliance moves locked in*")
     elif p.alliance_moves_pending:
         names = [ALLIANCE_MOVES[m["move_id"]]["name"] for m in p.alliance_moves_pending]
         lines.append(f"Pending: {', '.join(names)}")
@@ -323,31 +324,31 @@ async def send_alliance_menu(context, game, p, edit_message=None):
         remaining = a.move_uses.get(mid)
         if mid == "bhoomi_domain":
             if mid in pending_ids:
-                label = f"\u2705 Boundless Tower Domain (active)"
+                label = f"Boundless Tower Domain (active)"
                 move_buttons.append(InlineKeyboardButton(label, callback_data="ally_na"))
             elif a.bhoomi_forced_rest:
-                label = f"\U0001f4a4 Boundless Tower Domain (resting)"
+                label = f"Boundless Tower Domain (resting)"
                 move_buttons.append(InlineKeyboardButton(label, callback_data="ally_na"))
             elif a.bhoomi_streak >= 2:
-                label = f"\U0001f4a4 Boundless Tower Domain (cooldown)"
+                label = f"Boundless Tower Domain (cooldown)"
                 move_buttons.append(InlineKeyboardButton(label, callback_data="ally_na"))
             else:
-                label = f"\U0001f331 Boundless Tower Domain ({a.bhoomi_streak}/2)"
+                label = f"Boundless Tower Domain ({a.bhoomi_streak}/2)"
                 move_buttons.append(InlineKeyboardButton(label, callback_data=f"ally_move:bhoomi_domain"))
         elif mid in pending_ids:
-            label = f"\u2705 {mv['name']} (used)"
+            label = f"{mv['name']} (used)"
             move_buttons.append(InlineKeyboardButton(label, callback_data="ally_na"))
         elif remaining is not None and remaining <= 0:
-            label = f"\u274c {mv['name']} (used)"
+            label = f"{mv['name']} (used)"
             move_buttons.append(InlineKeyboardButton(label, callback_data="ally_na"))
         else:
-            label = f"\u2694\ufe0f {mv['name']}"
+            label = f"{mv['name']}"
             move_buttons.append(InlineKeyboardButton(label, callback_data=f"ally_move:{mid}"))
 
     buttons = _rows(move_buttons, 3)
 
     if not p.alliance_submitted and p.alliance_moves_pending:
-        buttons.append([InlineKeyboardButton("🔒 Lock in alliance moves", callback_data="ally_submit")])
+        buttons.append([InlineKeyboardButton("Lock in alliance moves", callback_data="ally_submit")])
 
     text = "\n".join(lines)
     markup = InlineKeyboardMarkup(buttons)
@@ -392,9 +393,10 @@ async def cmd_newgame(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Tap Join above to enter. Host: /startgame once ready (min {MIN_PLAYERS}, max {MAX_PLAYERS}). "
         "Use /info to understand the game.",
     )
-    context.job_queue.run_once(
-        lobby_timeout_callback, 300, data=game.chat_id, name=f"lobby_timeout_{game.chat_id}",
-    )
+    if context.job_queue:
+        context.job_queue.run_once(
+            lobby_timeout_callback, 300, data=game.chat_id, name=f"lobby_timeout_{game.chat_id}",
+        )
 
 
 async def cmd_invite(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -453,7 +455,7 @@ async def cmd_invite(update: Update, context: ContextTypes.DEFAULT_TYPE):
     USER_GAME[init_id] = chat_id
 
     await update.message.reply_text(
-        f"\u2694\ufe0f Duel challenge sent to {target_name}! Waiting for them to accept in DMs."
+        f"Duel challenge sent to {target_name}! Waiting for them to accept in DMs."
     )
 
     try:
@@ -466,13 +468,13 @@ async def cmd_invite(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pass
 
     buttons = [
-        [InlineKeyboardButton("\u2705 Accept Duel", callback_data=f"duel_accept:{chat_id}:{init_id}:{target_id}"),
-         InlineKeyboardButton("\u274c Decline", callback_data=f"duel_decline:{chat_id}:{init_id}:{target_id}")],
+        [InlineKeyboardButton("Accept Duel", callback_data=f"duel_accept:{chat_id}:{init_id}:{target_id}"),
+         InlineKeyboardButton("Decline", callback_data=f"duel_decline:{chat_id}:{init_id}:{target_id}")],
     ]
     try:
         await context.bot.send_message(
             target_id,
-            f"\u2694\ufe0f *{init_name}* has challenged you to a tower duel!\n\n"
+            f"*{init_name}* has challenged you to a tower duel!\n\n"
             f"Accept or decline below.",
             reply_markup=InlineKeyboardMarkup(buttons),
             parse_mode="Markdown",
@@ -480,9 +482,10 @@ async def cmd_invite(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except TelegramError:
         pass
 
-    context.job_queue.run_once(
-        duel_timeout_callback, 120, data=game.chat_id, name=f"duel_timeout_{game.chat_id}",
-    )
+    if context.job_queue:
+        context.job_queue.run_once(
+            duel_timeout_callback, 120, data=game.chat_id, name=f"duel_timeout_{game.chat_id}",
+        )
 
 
 def _add_player(game: Game, user):
@@ -578,7 +581,7 @@ async def cmd_startgame(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     game.phase = "night"
     game.day_number = 1
-    await update.message.reply_text("The siege begins tonight. \u2694\ufe0f")
+    await update.message.reply_text("The siege begins tonight.")
     await start_night(game, context)
 
 
@@ -611,13 +614,13 @@ async def cmd_cancelgame(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if lid:
             await context.bot.edit_message_text(
                 chat_id=chat_id, message_id=lid,
-                text="🛑 Game cancelled by the host.",
+                text="Game cancelled by the host.",
             )
     except TelegramError:
         pass
     _cleanup_game(game)
     del GAMES[chat_id]
-    await update.message.reply_text("🛑 Game cancelled. Start a fresh one with /newgame.")
+    await update.message.reply_text("Game cancelled. Start a fresh one with /newgame.")
 
 
 # ---------------------------------------------------------------------------
@@ -626,29 +629,29 @@ async def cmd_cancelgame(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 INFO_DETAILS = {
     "pandey_slash": (
-        "\u2694\ufe0f *Nirvana Sword Slash* \u2014 Knight\n\n"
+        "*Nirvana Sword Slash* - Knight\n\n"
         "A massive, devastating sword strike that deals *50 damage* to an enemy's tower.\n"
         "This is one of the strongest single attacks in the game. Use it when you want to "
         "cripple someone badly in one night.\n\n"
         "Uses: 1 per game"
     ),
     "chamar_teleporter": (
-        "🌀 *Dino Dimension* \u2014 Knight\n\n"
+        "*Dino Dimension* - Knight\n\n"
         "Kidnap a player and drag them out of their tower! The kidnapped player will "
-        "*skip their next night* \u2014 they can't do anything.\n\n"
+        "*skip their next night* - they can't do anything.\n\n"
         "To escape before the next night, they must sacrifice 1 unused move using "
         "*Almighty Mulla* (Healer move). If they don't escape, they lose a whole turn.\n\n"
         "Uses: 1 per game"
     ),
     "bengali_shield": (
-        "🛡\ufe0f *Holy Shield* \u2014 Mage\n\n"
+        "*Holy Shield* - Mage\n\n"
         "Summon a magical shield around your tower. For the entire night, *all attacks "
         "and soldier strikes* aimed at you are completely blocked.\n\n"
         "This includes normal attacks, alliance attacks, and soldiers. Nothing gets through.\n\n"
         "Uses: 1 per game"
     ),
     "jharkhand_seal": (
-        "🔒 *Judgement Seal* \u2014 Mage\n\n"
+        "*Judgement Seal* - Mage\n\n"
         "Seal an enemy's normal moves for the night. They can't use any of their "
         "class abilities (Knight, Mage, Healer moves).\n\n"
         "However, it does *not* block their soldiers or alliance moves. "
@@ -656,45 +659,45 @@ INFO_DETAILS = {
         "Uses: 1 per game"
     ),
     "chandal_eyes": (
-        "👁\ufe0f *Chandal Eyes* \u2014 Mage\n\n"
+        "*Chandal Eyes* - Mage\n\n"
         "Hypnotize a player. If someone attacks you tonight, the attack gets "
         "*redirected* to the player you hypnotized instead.\n\n"
         "How to use:\n"
         "1. Choose the player you want to hypnotize (the bait)\n"
         "2. Choose who you want their attack redirected to (the target)\n\n"
-        "This also works on Judgement Seal \u2014 the seal gets redirected too!\n\n"
+        "This also works on Judgement Seal - the seal gets redirected too!\n\n"
         "Uses: 1 per game"
     ),
     "rajpoot_mirror": (
-        "🩸 *Divine Slash Reflection* \u2014 Mage\n\n"
+        "*Divine Slash Reflection* - Mage\n\n"
         "Place a magical mirror around your tower. If someone hits you with "
-        "*Nirvana Sword Slash*, it gets reflected \u2014 *both* you and the attacker take 25 damage.\n\n"
+        "*Nirvana Sword Slash*, it gets reflected - *both* you and the attacker take 25 damage.\n\n"
         "This only works against Nirvana Sword Slash. Other attacks pass through normally.\n\n"
         "Uses: 1 per game"
     ),
     "yadav_milk": (
-        "🥛 *Magic Milk* \u2014 Healer\n\n"
+        "*Magic Milk* - Healer\n\n"
         "A versatile potion with two uses:\n\n"
         "1. *Pre-emptively* (risky, high reward): Pick it as a normal move during the night. "
-        "It absorbs up to *35 HP* of incoming damage \u2014 but if no one attacks you, it's wasted.\n"
+        "It absorbs up to *35 HP* of incoming damage - but if no one attacks you, it's wasted.\n"
         "2. *Reactive* (safe): After results are announced, if you took damage and "
         "used 2 or fewer moves, you get a 50-second window to restore *25 HP*.\n\n"
         "Uses: 2 per game"
     ),
     "almighty_mulla": (
-        "\u26d3\ufe0f *Almighty Mulla* \u2014 Healer\n\n"
-        "This move can *only* be used reactively \u2014 you can't pick it during the night.\n\n"
+        "*Almighty Mulla* - Healer\n\n"
+        "This move can *only* be used reactively - you can't pick it during the night.\n\n"
         "If you were kidnapped (Dino Dimension), you can sacrifice *1 other unused move* "
         "along with this to break free and avoid skipping your next night.\n\n"
         "Think of it as your escape plan if someone targets you for kidnapping.\n\n"
         "Uses: 1 per game"
     ),
     "super_soldier_serum": (
-        "\U0001f9ea *Super Soldier Serum* \u2014 Healer\n\n"
+        "*Super Soldier Serum* - Healer\n\n"
         "Inject your troops with a powerful serum that enhances their combat abilities "
         "for *one night only*.\n\n"
-        "\u2022 Soldier attack damage: 14 \u2192 *24*\n"
-        "\u2022 Soldier defense block: 8 \u2192 *12*\n\n"
+        "- Soldier attack damage: 14 -> *24*\n"
+        "- Soldier defense block: 8 -> *12*\n\n"
         "Use this before deploying your soldiers for maximum impact. "
         "The effect wears off at dawn.\n\n"
         "Uses: 1 per game"
@@ -703,85 +706,85 @@ INFO_DETAILS = {
 
 CLASS_INFO = {
     "Knight": (
-        "🛡\ufe0f *Knight* \u2014 The Attacker\n\n"
+        "*Knight* - The Attacker\n\n"
         "Knights are all about dealing heavy damage and disrupting enemies.\n"
         "They have 2 moves:\n\n"
-        "\u2022 *Nirvana Sword Slash* \u2014 50 damage nuke (1 use)\n"
-        "\u2022 *Dino Dimension* \u2014 Kidnap a player (1 use)\n\n"
+        "- *Nirvana Sword Slash* - 50 damage nuke (1 use)\n"
+        "- *Dino Dimension* - Kidnap a player (1 use)\n\n"
         "Use the Knight when you want to be aggressive and take down enemy towers."
     ),
     "Mage": (
-        "🔮 *Mage* \u2014 The Strategist\n\n"
+        "*Mage* - The Strategist\n\n"
         "Mages control the battlefield with shields, seals, mirrors, and mind tricks.\n"
         "They have 4 moves:\n\n"
-        "\u2022 *Holy Shield* \u2014 Blocks all attacks for a night (1 use)\n"
-        "\u2022 *Judgement Seal* \u2014 Locks enemy's normal moves (1 use)\n"
-        "\u2022 *Chandal Eyes* \u2014 Redirect an attack to someone else (1 use)\n"
-        "\u2022 *Divine Slash Reflection* \u2014 Reflects Nirvana Sword Slash (1 use)\n\n"
+        "- *Holy Shield* - Blocks all attacks for a night (1 use)\n"
+        "- *Judgement Seal* - Locks enemy's normal moves (1 use)\n"
+        "- *Chandal Eyes* - Redirect an attack to someone else (1 use)\n"
+        "- *Divine Slash Reflection* - Reflects Nirvana Sword Slash (1 use)\n\n"
         "Use the Mage when you want to outsmart your enemies and protect yourself."
     ),
     "Healer": (
-        "💊 *Healer* \u2014 The Survivor\n\n"
+        "*Healer* - The Survivor\n\n"
         "Healers keep their tower alive with healing, buffs, and escape options.\n"
         "They have 3 moves:\n\n"
-        "\u2022 *Magic Milk* \u2014 Pre-emptive absorb 35 HP or reactive heal 25 HP (2 uses)\n"
-        "\u2022 *Super Soldier Serum* \u2014 Boost soldiers to 24 attack / 12 defense for one night (1 use)\n"
-        "\u2022 *Almighty Mulla* \u2014 Escape kidnapping by sacrificing 1 move (1 use)\n\n"
+        "- *Magic Milk* - Pre-emptive absorb 35 HP or reactive heal 25 HP (2 uses)\n"
+        "- *Super Soldier Serum* - Boost soldiers to 24 attack / 12 defense for one night (1 use)\n"
+        "- *Almighty Mulla* - Escape kidnapping by sacrificing 1 move (1 use)\n\n"
         "Use the Healer when you need to survive, empower troops, or recover from heavy damage."
     ),
 }
 
 SOLDIER_INFO = (
-    "\U0001fa96 *Soldiers*\n\n"
-    "You command *5 soldiers* each night. They are your loyal army \u2014 use them "
+    "*Soldiers*\n\n"
+    "You command *5 soldiers* each night. They are your loyal army - use them "
     "to defend your tower or attack enemies.\n\n"
     "*What each soldier can do:*\n"
-    "\U0001f3e0 *Defend Home* \u2014 Each soldier on defense blocks *8 damage* "
+    "*Defend Home* - Each soldier on defense blocks *8 damage* "
     "(max 3 soldiers on defense = 24 damage blocked)\n"
-    "\u2694\ufe0f *Attack Enemy* \u2014 Each attacking soldier deals *14 damage* "
+    "*Attack Enemy* - Each attacking soldier deals *14 damage* "
     "(max 2 soldiers per enemy per night = 28 damage)\n"
-    "\U0001f4a4 *Rest* \u2014 Soldiers who stay home and rest recover their stamina\n\n"
+    "*Rest* - Soldiers who stay home and rest recover their stamina\n\n"
     "*Rest System (important!):*\n"
-    "\u2022 Every time you deploy a soldier, they work for 1 night.\n"
-    "\u2022 After *2 consecutive work nights*, the soldier is *forced to rest* "
+    "- Every time you deploy a soldier, they work for 1 night.\n"
+    "- After *2 consecutive work nights*, the soldier is *forced to rest* "
     "the next night (can't be deployed).\n"
-    "\u2022 Soldiers who are idle recover \u2014 once they've rested as many nights "
+    "- Soldiers who are idle recover - once they've rested as many nights "
     "as they worked, they're fully refreshed.\n\n"
     "*Strategy Tip:* Rotate your soldiers! Don't use the same 3 every night "
     "or they'll get exhausted. Keep some resting while others fight."
 )
 
 ALLIANCE_INFO = (
-    "🤝 *Alliances*\n\n"
+    "*Alliances*\n\n"
     "Alliances unlock on *Day 3*. You can request to form a 2-player pact with "
     "another surviving player. The player with higher HP becomes the *alliance head*.\n\n"
     "*Alliance Moves (head only):*\n\n"
-    "\u2694\ufe0f *Seelampur Strike* \u2014 "
+    "*Seelampur Strike* - "
     "Deal a massive *100 damage* to any enemy tower. One-shot potential!\n"
     "(1 use per game)\n\n"
-    "\u2744\ufe0f *Ice Spear* \u2014 "
+    "*Ice Spear* - "
     "Freeze *all players not in your alliance*. Their normal moves AND soldiers "
     "are voided for the night. They can't do anything.\n"
     "(1 use per game)\n\n"
-    "🌱 *Boundless Tower Domain* \u2014 "
+    "*Boundless Tower Domain* - "
     "Cast a protective ward over your alliance. Any enemy alliance attack "
     "(including freezes) aimed at your members is deflected.\n"
     "Has a 2-1 cycle: use it 2 nights, then forced rest 1 night.\n"
     "(Unlimited uses, but follows the cycle)\n\n"
     "*Winner Conditions:*\n"
-    "\u2022 If the lobby has *6+ players* and 2 allied players are the last "
-    "ones standing \u2014 they win *together*.\n"
-    "\u2022 If the lobby has *5 or fewer* players, the alliance automatically "
-    "breaks when only 2 remain \u2014 they fight 1v1 for the throne.\n\n"
+    "- If the lobby has *6+ players* and 2 allied players are the last "
+    "ones standing - they win *together*.\n"
+    "- If the lobby has *5 or fewer* players, the alliance automatically "
+    "breaks when only 2 remain - they fight 1v1 for the throne.\n\n"
     "*Breaking an alliance:* Either member can break it anytime from their DM menu."
 )
 
 GAME_INTRO = (
-    "🏀 *Welcome to Tower Siege!*\n\n"
+    "*Welcome to Tower Siege!*\n\n"
     "You are a king with a tower. Your tower has *100 HP* spread across *3 floors*:\n"
-    "\u2022 Floor 1: 30 HP (breaks at 70 HP)\n"
-    "\u2022 Floor 2: 30 HP (breaks at 40 HP)\n"
-    "\u2022 Floor 3: 40 HP (breaks at 0 HP)\n\n"
+    "- Floor 1: 30 HP (breaks at 70 HP)\n"
+    "- Floor 2: 30 HP (breaks at 40 HP)\n"
+    "- Floor 3: 40 HP (breaks at 0 HP)\n\n"
     "Each night, you pick up to *3 moves* from your classes (Knight, Mage, Healer) "
     "and deploy your *5 soldiers*. Survive, destroy enemy towers, and be the last "
     "king standing!\n\n"
@@ -794,9 +797,9 @@ async def cmd_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Use /info in my DM to learn the game!")
         return
     buttons = [
-        [InlineKeyboardButton("🪖 Soldiers", callback_data="info_soldiers"),
-         InlineKeyboardButton("\u2694\ufe0f 3 Pillars", callback_data="info_pillars"),
-         InlineKeyboardButton("🤝 Alliance", callback_data="info_alliance")],
+        [InlineKeyboardButton("Soldiers", callback_data="info_soldiers"),
+         InlineKeyboardButton("3 Pillars", callback_data="info_pillars"),
+         InlineKeyboardButton("Alliance", callback_data="info_alliance")],
     ]
     await update.message.reply_text(
         GAME_INTRO,
@@ -811,7 +814,7 @@ async def cb_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
 
     if data == "info_soldiers":
-        buttons = [[InlineKeyboardButton("\u00ab Back", callback_data="info_back")]]
+        buttons = [[InlineKeyboardButton("Back", callback_data="info_back")]]
         await query.edit_message_text(
             SOLDIER_INFO,
             reply_markup=InlineKeyboardMarkup(buttons),
@@ -820,13 +823,13 @@ async def cb_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif data == "info_pillars":
         buttons = [
-            [InlineKeyboardButton("🛡\ufe0f Knight", callback_data="info_class:Knight"),
-             InlineKeyboardButton("🔮 Mage", callback_data="info_class:Mage"),
-             InlineKeyboardButton("💊 Healer", callback_data="info_class:Healer")],
-            [InlineKeyboardButton("\u00ab Back", callback_data="info_back")],
+            [InlineKeyboardButton("Knight", callback_data="info_class:Knight"),
+             InlineKeyboardButton("Mage", callback_data="info_class:Mage"),
+             InlineKeyboardButton("Healer", callback_data="info_class:Healer")],
+            [InlineKeyboardButton("Back", callback_data="info_back")],
         ]
         await query.edit_message_text(
-            "*\u2694\ufe0f The 3 Pillars*\n\n"
+            "*The 3 Pillars*\n\n"
             "You belong to one of three classes. Each class has unique moves.\n"
             "Tap a class to see its moves explained in detail:",
             reply_markup=InlineKeyboardMarkup(buttons),
@@ -834,7 +837,7 @@ async def cb_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     elif data == "info_alliance":
-        buttons = [[InlineKeyboardButton("\u00ab Back", callback_data="info_back")]]
+        buttons = [[InlineKeyboardButton("Back", callback_data="info_back")]]
         await query.edit_message_text(
             ALLIANCE_INFO,
             reply_markup=InlineKeyboardMarkup(buttons),
@@ -850,7 +853,7 @@ async def cb_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if mv:
                 move_buttons.append(InlineKeyboardButton(mv["name"], callback_data=f"info_move:{mid}"))
         buttons = _rows(move_buttons, 2)
-        buttons.append([InlineKeyboardButton("\u00ab Back", callback_data="info_pillars")])
+        buttons.append([InlineKeyboardButton("Back", callback_data="info_pillars")])
         text = CLASS_INFO.get(class_name, f"*{class_name}*")
         await query.edit_message_text(
             text,
@@ -861,7 +864,7 @@ async def cb_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data.startswith("info_move:"):
         move_id = data.split(":", 1)[1]
         details = INFO_DETAILS.get(move_id, "No info available.")
-        buttons = [[InlineKeyboardButton("\u00ab Back", callback_data=f"info_class:{MOVES[move_id]['class']}")]]
+        buttons = [[InlineKeyboardButton("Back", callback_data=f"info_class:{MOVES[move_id]['class']}")]]
         await query.edit_message_text(
             details,
             reply_markup=InlineKeyboardMarkup(buttons),
@@ -870,9 +873,9 @@ async def cb_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif data == "info_back":
         buttons = [
-            [InlineKeyboardButton("🪖 Soldiers", callback_data="info_soldiers"),
-             InlineKeyboardButton("\u2694\ufe0f 3 Pillars", callback_data="info_pillars"),
-             InlineKeyboardButton("🤝 Alliance", callback_data="info_alliance")],
+            [InlineKeyboardButton("Soldiers", callback_data="info_soldiers"),
+             InlineKeyboardButton("3 Pillars", callback_data="info_pillars"),
+             InlineKeyboardButton("Alliance", callback_data="info_alliance")],
         ]
         await query.edit_message_text(
             GAME_INTRO,
@@ -895,12 +898,12 @@ async def lobby_timeout_callback(context: ContextTypes.DEFAULT_TYPE):
         if lid:
             await context.bot.edit_message_text(
                 chat_id=chat_id, message_id=lid,
-                text="⏰ Lobby closed \u2014 no one started the game in 5 minutes.",
+                text="Lobby closed - no one started the game in 5 minutes.",
             )
     except TelegramError:
         pass
     try:
-        await context.bot.send_message(chat_id, "⏰ No one started the game. Lobby closed after 5 minutes.")
+        await context.bot.send_message(chat_id, "No one started the game. Lobby closed after 5 minutes.")
     except TelegramError:
         pass
     _cleanup_game(game)
@@ -914,11 +917,11 @@ async def duel_timeout_callback(context: ContextTypes.DEFAULT_TYPE):
         return
     for uid in list(game.players.keys()):
         try:
-            await context.bot.send_message(uid, "⏰ The duel challenge expired.")
+            await context.bot.send_message(uid, "The duel challenge expired.")
         except TelegramError:
             pass
     try:
-        await context.bot.send_message(chat_id, "⏰ The duel challenge timed out.")
+        await context.bot.send_message(chat_id, "The duel challenge timed out.")
     except TelegramError:
         pass
     _cleanup_game(game)
@@ -978,7 +981,7 @@ async def _refresh_alliance_reminders(game: Game, context: ContextTypes.DEFAULT_
     never more than one live button per person."""
     if game.is_duel or game.day_number < ALLIANCES_UNLOCK_DAY:
         return
-    button = InlineKeyboardMarkup([[InlineKeyboardButton("🤝 Request Alliance", callback_data="ally_open")]])
+    button = InlineKeyboardMarkup([[InlineKeyboardButton("Request Alliance", callback_data="ally_open")]])
     for p in game.alive_players():
         if not _player_eligible_for_reminder(game, p):
             continue
@@ -987,14 +990,14 @@ async def _refresh_alliance_reminders(game: Game, context: ContextTypes.DEFAULT_
             try:
                 await context.bot.edit_message_text(
                     chat_id=p.user_id, message_id=old_msg_id,
-                    text="\u23f0 This reminder has expired \u2014 a new day has begun.",
+                    text="This reminder has expired - a new day has begun.",
                 )
             except TelegramError:
                 pass
         try:
             sent = await context.bot.send_message(
                 p.user_id,
-                f"🤝 Day {game.day_number} \u2014 tap below to request an alliance.",
+                f"Day {game.day_number} - tap below to request an alliance.",
                 reply_markup=button,
             )
             ALLY_REMINDER_MSG[p.user_id] = sent.message_id
@@ -1008,7 +1011,7 @@ async def _refresh_alliance_reminders(game: Game, context: ContextTypes.DEFAULT_
 
 async def start_night(game: Game, context: ContextTypes.DEFAULT_TYPE):
     if game.pending_alliance_requests:
-        await _clear_all_pending_requests(context, game, "\u23f0 This alliance request expired \u2014 night has fallen.")
+        await _clear_all_pending_requests(context, game, "This alliance request expired - night has fallen.")
 
     for p in game.alive_players():
         p.reset_round_flags()
@@ -1023,7 +1026,7 @@ async def start_night(game: Game, context: ContextTypes.DEFAULT_TYPE):
             try:
                 await context.bot.send_message(
                     p.user_id,
-                    "🌀 You were kidnapped and never escaped \u2014 you're skipped tonight."
+                    "You were kidnapped and never escaped - you're skipped tonight."
                 )
             except TelegramError:
                 pass
@@ -1057,13 +1060,14 @@ async def start_night(game: Game, context: ContextTypes.DEFAULT_TYPE):
         await _send_banner(context, game.chat_id, NIGHT_BANNER_URL, msg.NIGHT_BANNER_DUEL)
         await context.bot.send_message(
             game.chat_id,
-            f"\u2694\ufe0f The duel continues... Both players check DMs. {NIGHT_TIMEOUT_SECONDS // 60} min. to submit.",
+            f"The duel continues... Both players check DMs. {NIGHT_TIMEOUT_SECONDS // 60} min. to submit.",
         )
 
-    game.night_job = context.job_queue.run_once(
-        night_timeout_callback, NIGHT_TIMEOUT_SECONDS,
-        data=game.chat_id, name=f"night_timeout_{game.chat_id}",
-    )
+    if context.job_queue:
+        game.night_job = context.job_queue.run_once(
+            night_timeout_callback, NIGHT_TIMEOUT_SECONDS,
+            data=game.chat_id, name=f"night_timeout_{game.chat_id}",
+        )
 
 
 async def night_timeout_callback(context: ContextTypes.DEFAULT_TYPE):
@@ -1132,7 +1136,7 @@ async def cb_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if act["move_id"] in MOVES:
                 p.spend_move(act["move_id"])
         PENDING.pop(uid, None)
-        await query.edit_message_text("🔒 Moves locked in for tonight.")
+        await query.edit_message_text("Moves locked in for tonight.")
         await _maybe_resolve(game, context)
         return
 
@@ -1156,7 +1160,7 @@ async def cb_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
             targets = _alive_targets(game, {uid})
             target_buttons = [InlineKeyboardButton(t.name, callback_data=f"tgt:{t.user_id}") for t in targets]
             buttons = _rows(target_buttons, 2)
-            buttons.append([InlineKeyboardButton("\u00ab Cancel", callback_data="backmenu")])
+            buttons.append([InlineKeyboardButton("Cancel", callback_data="backmenu")])
             await query.edit_message_text(
                 f"{mv['name']}: choose a target.", reply_markup=InlineKeyboardMarkup(buttons)
             )
@@ -1176,7 +1180,7 @@ async def cb_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
             targets = _alive_targets(game, {uid, target_id})
             target_buttons = [InlineKeyboardButton(t.name, callback_data=f"rdr:{t.user_id}") for t in targets]
             buttons = _rows(target_buttons, 2)
-            buttons.append([InlineKeyboardButton("\u00ab Cancel", callback_data="backmenu")])
+            buttons.append([InlineKeyboardButton("Cancel", callback_data="backmenu")])
             await query.edit_message_text(
                 f"{mv['name']}: if they attack you tonight, redirect it to whom?",
                 reply_markup=InlineKeyboardMarkup(buttons),
@@ -1244,7 +1248,7 @@ async def cb_soldiers(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 p.soldier_deployment[idx] = dest
         p.soldiers_submitted = True
         SOLDIER_PENDING.pop(uid, None)
-        await query.edit_message_text("🔒 Soldiers locked in for tonight.")
+        await query.edit_message_text("Soldiers locked in for tonight.")
         await _maybe_resolve(game, context)
         return
 
@@ -1296,9 +1300,9 @@ async def cb_soldiers(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not avail:
             await query.answer("All moves already at max.")
             return
-        move_buttons = [InlineKeyboardButton(f"\u2728 {MOVES[m]['name']}", callback_data=f"bonus_pick:{m}") for m in avail]
+        move_buttons = [InlineKeyboardButton(f"Restore {MOVES[m]['name']}", callback_data=f"bonus_pick:{m}") for m in avail]
         rows = _rows(move_buttons, 2)
-        rows.append([InlineKeyboardButton("\u00ab Back", callback_data="backmenu")])
+        rows.append([InlineKeyboardButton("Back", callback_data="backmenu")])
         await query.edit_message_text(
             f"Choose a move to restore ({p.bonus_restores}/2 remaining):",
             reply_markup=InlineKeyboardMarkup(rows),
@@ -1320,9 +1324,9 @@ async def cb_soldiers(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if p.bonus_restores > 0:
             avail = [mid for mid in NORMAL_MOVE_IDS if p.move_uses.get(mid, 0) < MOVES[mid]["max_uses"]]
             if avail:
-                move_buttons = [InlineKeyboardButton(f"\u2728 {MOVES[m]['name']}", callback_data=f"bonus_pick:{m}") for m in avail]
+                move_buttons = [InlineKeyboardButton(f"Restore {MOVES[m]['name']}", callback_data=f"bonus_pick:{m}") for m in avail]
                 rows = _rows(move_buttons, 2)
-                rows.append([InlineKeyboardButton("\u00ab Back", callback_data="backmenu")])
+                rows.append([InlineKeyboardButton("Back", callback_data="backmenu")])
                 await query.edit_message_text(
                     f"Choose another move ({p.bonus_restores}/2 remaining):",
                     reply_markup=InlineKeyboardMarkup(rows),
@@ -1351,7 +1355,7 @@ async def cb_alliance(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         await _break_alliance(context, game, uid)
         await query.edit_message_text("Alliance broken. You're free to act against them now.")
-        await context.bot.send_message(game.chat_id, f"💔 {p.name} has shattered a pact.")
+        await context.bot.send_message(game.chat_id, f"{p.name} has shattered a pact.")
         HEAL_DATA.pop(uid, None)
         ALLIANCE_MSG.pop(uid, None)
         return
@@ -1397,7 +1401,7 @@ async def cb_alliance(update: Update, context: ContextTypes.DEFAULT_TYPE):
             targets = _alive_targets(game, {uid})
             target_buttons = [InlineKeyboardButton(t.name, callback_data=f"ally_tgt:{t.user_id}") for t in targets]
             buttons = _rows(target_buttons, 2)
-            buttons.append([InlineKeyboardButton("\u00ab Back", callback_data="ally_back")])
+            buttons.append([InlineKeyboardButton("Back", callback_data="ally_back")])
             await query.edit_message_text(
                 f"{mv['name']}: choose a target.", reply_markup=InlineKeyboardMarkup(buttons)
             )
@@ -1430,7 +1434,7 @@ async def cb_alliance(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 a.move_uses[mid] = max(0, a.move_uses.get(mid, 0) - 1)
         p.alliance_moves_pending = []
         p.alliance_submitted = True
-        await query.edit_message_text("🔒 Alliance moves locked in.")
+        await query.edit_message_text("Alliance moves locked in.")
         await send_alliance_menu(context, game, p, edit_message=query.message)
         return
 
@@ -1457,7 +1461,7 @@ async def _break_alliance(context, game, uid):
         if other:
             other.alliance_id = None
         try:
-            await context.bot.send_message(other_id, f"💔 {p.name} has broken your alliance.")
+            await context.bot.send_message(other_id, f"{p.name} has broken your alliance.")
         except TelegramError:
             pass
 
@@ -1505,13 +1509,13 @@ async def do_resolve(game: Game, context: ContextTypes.DEFAULT_TYPE):
             net = raw - block
             slot_used = len([a for a in p.night_actions if a["move_id"] in MOVES])
             buttons = InlineKeyboardMarkup([
-                [InlineKeyboardButton("\u2705 Heal (+25 HP)", callback_data="heal_yes"),
-                 InlineKeyboardButton("\u274c Skip", callback_data="heal_no")],
+                [InlineKeyboardButton("Heal (+25 HP)", callback_data="heal_yes"),
+                 InlineKeyboardButton("Skip", callback_data="heal_no")],
             ])
             try:
                 await context.bot.send_message(
                     uid,
-                    f"💧 Your tower took *{net}* net damage. You have 50s to use Magic Milk and restore 25 HP. "
+                    f"Your tower took *{net}* net damage. You have 50s to use Magic Milk and restore 25 HP. "
                     f"(Slot left: {MAX_MOVES_PER_NIGHT - slot_used}/{MAX_MOVES_PER_NIGHT})",
                     reply_markup=buttons,
                     parse_mode="Markdown",
@@ -1519,9 +1523,10 @@ async def do_resolve(game: Game, context: ContextTypes.DEFAULT_TYPE):
             except TelegramError:
                 pass
 
-        game.heal_job = context.job_queue.run_once(
-            heal_timeout_callback, 50, data=game.chat_id, name=f"heal_timeout_{game.chat_id}",
-        )
+        if context.job_queue:
+            game.heal_job = context.job_queue.run_once(
+                heal_timeout_callback, 50, data=game.chat_id, name=f"heal_timeout_{game.chat_id}",
+            )
     else:
         await _finish_resolution(game, context, phase1, set())
 
@@ -1548,7 +1553,7 @@ async def _finish_resolution(game, context, phase1, heal_accepted):
             try:
                 await context.bot.send_message(
                     uid,
-                    f"\U0001f480 Your tower has collapsed on Day {game.day_number}. You are out of the game."
+                    f"Your tower has collapsed on Day {game.day_number}. You are out of the game."
                 )
             except TelegramError:
                 pass
@@ -1563,7 +1568,7 @@ async def _finish_resolution(game, context, phase1, heal_accepted):
                         try:
                             await context.bot.send_message(
                                 survivor_id,
-                                f"💔 Your ally {elim_p.name} has fallen. Your pact is shattered."
+                                f"Your ally {elim_p.name} has fallen. Your pact is shattered."
                             )
                         except TelegramError:
                             pass
@@ -1577,7 +1582,7 @@ async def _finish_resolution(game, context, phase1, heal_accepted):
             bar = _hp_bar(p.hp)
             await context.bot.send_message(
                 p.user_id,
-                f"\u2764\ufe0f *Your tower HP:* {p.hp}/100\n{bar}",
+                f"*Your tower HP:* {p.hp}/100\n{bar}",
                 parse_mode="Markdown",
             )
         except TelegramError:
@@ -1601,19 +1606,19 @@ async def _finish_resolution(game, context, phase1, heal_accepted):
                 except TelegramError:
                     pass
     else:
-        await context.bot.send_message(game.chat_id, "🎭 What a surprise! Everyone made it through the night.")
+        await context.bot.send_message(game.chat_id, "What a surprise! Everyone made it through the night.")
 
-    closing = msg.player_list_text(game) + f"\n\n💬 You have {DAY_CHAT_SECONDS} seconds to talk before the next night falls."
+    closing = msg.player_list_text(game) + f"\n\nYou have {DAY_CHAT_SECONDS} seconds to talk before the next night falls."
     await context.bot.send_message(game.chat_id, closing, parse_mode="Markdown")
 
     for p in game.alive_players():
         if p.pending_kidnap_by is not None:
             kidnapper = game.players.get(p.pending_kidnap_by)
-            btn = InlineKeyboardMarkup([[InlineKeyboardButton("\u26d3\ufe0f Break Free", callback_data="breakfree_open")]])
+            btn = InlineKeyboardMarkup([[InlineKeyboardButton("Break Free", callback_data="breakfree_open")]])
             try:
                 await context.bot.send_message(
                     p.user_id,
-                    f"🌀 You've been kidnapped by {kidnapper.name if kidnapper else 'someone'}! "
+                    f"You've been kidnapped by {kidnapper.name if kidnapper else 'someone'}! "
                     "Sacrifice 1 other move to escape, or do nothing and skip next night.",
                     reply_markup=btn,
                 )
@@ -1625,7 +1630,7 @@ async def _finish_resolution(game, context, phase1, heal_accepted):
         winner_names = ", ".join(w.name for w in winner)
         await _send_banner(context, game.chat_id, EVENT_BANNERS.get("winner"), "")
         lines = [
-            "\U0001F3C6\U0001F3C6\U0001F3C6\U0001F3C6",
+            "",
             f"*{winner_names} wins Tower Siege!*",
             f"Days fought: {game.day_number - 1}",
             "",
@@ -1636,10 +1641,10 @@ async def _finish_resolution(game, context, phase1, heal_accepted):
             if not p:
                 continue
             if p.alive:
-                lines.append(f"\U0001F3C6 {p.name} \u2014 victorious!")
+                lines.append(f"{p.name} - victorious!")
             else:
-                lines.append(f"\u2620\ufe0f {p.name} \u2014 lost the war")
-        lines.extend(["", "Thanks for playing the game \u2014 Hopeless fellow", "\U0001F3C6\U0001F3C6\U0001F3C6\U0001F3C6"])
+                lines.append(f"{p.name} - lost the war")
+        lines.extend(["", "Thanks for playing the game - Hopeless fellow", ""])
         await context.bot.send_message(game.chat_id, "\n".join(lines), parse_mode="Markdown")
         _cleanup_game(game)
         return
@@ -1648,15 +1653,16 @@ async def _finish_resolution(game, context, phase1, heal_accepted):
         if game.day_number == ALLIANCES_UNLOCK_DAY:
             await context.bot.send_message(
                 game.chat_id,
-                f"🤝 *Day {ALLIANCES_UNLOCK_DAY} \u2014 Alliances are now unlocked!*\n\n"
+                f"*Day {ALLIANCES_UNLOCK_DAY} - Alliances are now unlocked!*\n\n"
                 "Surviving players can request ONE alliance in their DMs.",
                 parse_mode="Markdown",
             )
         await _refresh_alliance_reminders(game, context)
 
-    game.day_job = context.job_queue.run_once(
-        day_end_callback, DAY_CHAT_SECONDS, data=game.chat_id, name=f"day_end_{game.chat_id}",
-    )
+    if context.job_queue:
+        game.day_job = context.job_queue.run_once(
+            day_end_callback, DAY_CHAT_SECONDS, data=game.chat_id, name=f"day_end_{game.chat_id}",
+        )
 
 
 async def day_end_callback(context: ContextTypes.DEFAULT_TYPE):
@@ -1706,11 +1712,11 @@ async def cb_heal(update: Update, context: ContextTypes.DEFAULT_TYPE):
         p = game.players.get(uid)
         if p:
             p.move_uses["yadav_milk"] = max(0, p.move_uses["yadav_milk"] - 1)
-        await query.edit_message_text("\u2705 You used Magic Milk to heal for 25 HP!")
+        await query.edit_message_text("You used Magic Milk to heal for 25 HP!")
     elif data == "heal_no":
         HEAL_DECLINED.add(uid)
         HEAL_ACCEPTED.discard(uid)
-        await query.edit_message_text("\u274c You chose not to heal.")
+        await query.edit_message_text("You chose not to heal.")
 
     eligible = heal_info.get("eligible", set())
     responded = HEAL_ACCEPTED | HEAL_DECLINED
@@ -1802,13 +1808,13 @@ async def cb_ally_pick(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     sent = await query.edit_message_text(f"Alliance request sent to {target.name}.")
     buttons = [
-        [InlineKeyboardButton("\u2705 Accept", callback_data=f"ally_accept:{uid}"),
-         InlineKeyboardButton("\u274c Decline", callback_data=f"ally_decline:{uid}")],
+        [InlineKeyboardButton("Accept", callback_data=f"ally_accept:{uid}"),
+         InlineKeyboardButton("Decline", callback_data=f"ally_decline:{uid}")],
     ]
     try:
         request_msg = await context.bot.send_message(
             target_id,
-            f"🤝 {p.name} has requested an alliance with you.",
+            f"{p.name} has requested an alliance with you.",
             reply_markup=InlineKeyboardMarkup(buttons),
         )
     except TelegramError:
@@ -1857,7 +1863,7 @@ async def cb_ally_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if other_entries:
             await _expire_request_messages(
                 context, game, uid, other_entries,
-                "\u274c No longer available \u2014 they formed a pact with someone else.",
+                "No longer available - they formed a pact with someone else.",
             )
 
         for member_id in (requester_id, uid):
@@ -1869,7 +1875,7 @@ async def cb_ally_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 del game.alliances[old_a.id]
                 if other:
                     try:
-                        await context.bot.send_message(other, f"💔 Your alliance broke when {game.players[member_id].name} formed a new pact.")
+                        await context.bot.send_message(other, f"Your alliance broke when {game.players[member_id].name} formed a new pact.")
                     except TelegramError:
                         pass
 
@@ -1880,23 +1886,23 @@ async def cb_ally_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
         requester.has_ever_been_allied = True
         target.alliance_id = alliance.id
         target.has_ever_been_allied = True
-        break_btn = InlineKeyboardMarkup([[InlineKeyboardButton("💔 Break Alliance", callback_data="ally_break")]])
+        break_btn = InlineKeyboardMarkup([[InlineKeyboardButton("Break Alliance", callback_data="ally_break")]])
         await query.edit_message_text(
             f"Alliance formed with {requester.name}! {game.players[head_id].name} leads.",
             reply_markup=break_btn,
         )
         try:
-            await context.bot.send_message(requester_id, f"🤝 {target.name} accepted your alliance!", reply_markup=break_btn)
+            await context.bot.send_message(requester_id, f"{target.name} accepted your alliance!", reply_markup=break_btn)
         except TelegramError:
             pass
         await context.bot.send_message(
             game.chat_id,
-            f"🤝 A pact has been sealed between {requester.name} and {target.name}.",
+            f"A pact has been sealed between {requester.name} and {target.name}.",
         )
     else:
         await query.edit_message_text(f"You declined {requester.name}'s alliance request.")
         try:
-            await context.bot.send_message(requester_id, f"\u274c {target.name} declined your alliance request.")
+            await context.bot.send_message(requester_id, f"{target.name} declined your alliance request.")
         except TelegramError:
             pass
         if other_entries:
@@ -1917,7 +1923,7 @@ async def cmd_breakalliance(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     await _break_alliance(context, game, uid)
     await update.message.reply_text("Alliance broken.")
-    await context.bot.send_message(game.chat_id, f"💔 {p.name} has shattered a pact.")
+    await context.bot.send_message(game.chat_id, f"{p.name} has shattered a pact.")
 
 
 # ---------------------------------------------------------------------------
@@ -1948,8 +1954,9 @@ async def cb_duel(update: Update, context: ContextTypes.DEFAULT_TYPE):
             game.join_order.append(target_id)
             USER_GAME[target_id] = chat_id
 
-        for j in context.job_queue.get_jobs_by_name(f"duel_timeout_{chat_id}"):
-            j.schedule_removal()
+        if context.job_queue:
+            for j in context.job_queue.get_jobs_by_name(f"duel_timeout_{chat_id}"):
+                j.schedule_removal()
 
         await query.edit_message_text("You accepted the duel! The battle begins...")
 
@@ -1958,7 +1965,7 @@ async def cb_duel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             await context.bot.send_message(
                 chat_id,
-                f"\u2694\ufe0f *TOWER SIEGE DUEL* \u2694\ufe0f\n\n"
+                f"*TOWER SIEGE DUEL* \n\n"
                 f"{game.players[init_id].name} vs {game.players[target_id].name}\n"
                 f"The battle begins tonight!",
                 parse_mode="Markdown",
@@ -1968,7 +1975,7 @@ async def cb_duel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             await context.bot.send_message(
                 init_id,
-                f"\u2694\ufe0f *{game.players[target_id].name}* accepted your duel challenge! The battle begins tonight!",
+                f"*{game.players[target_id].name}* accepted your duel challenge! The battle begins tonight!",
                 parse_mode="Markdown",
             )
         except TelegramError:
@@ -1981,14 +1988,17 @@ async def cb_duel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         chat_id = int(parts[1])
         init_id = int(parts[2])
         target_id = int(parts[3])
+        if uid != target_id:
+            return
         game = GAMES.get(chat_id)
         if game:
+            _cleanup_game(game)
             del GAMES[chat_id]
         await query.edit_message_text("Duel declined. Challenge cancelled.")
         try:
             await context.bot.send_message(
                 init_id,
-                f"\u274c Your duel challenge was declined by the opponent.",
+                f"Your duel challenge was declined by the opponent.",
             )
         except TelegramError:
             pass
@@ -2011,11 +2021,11 @@ async def cb_breakfree_open(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text("You haven't been kidnapped.")
         return
     if p.move_uses.get("almighty_mulla", 0) <= 0:
-        await query.edit_message_text("No Almighty Mulla left \u2014 no escape.")
+        await query.edit_message_text("No Almighty Mulla left - no escape.")
         return
     sacrificeable = [mid for mid in NORMAL_MOVE_IDS if mid != "almighty_mulla" and p.move_uses.get(mid, 0) > 0]
     if len(sacrificeable) < 1:
-        await query.edit_message_text("You need 1 move to sacrifice \u2014 not enough left.")
+        await query.edit_message_text("You need 1 move to sacrifice - not enough left.")
         return
     SAC_PENDING[uid] = {"chosen": []}
     await _send_sacrifice_menu(query.message, p, uid, edit=True)
@@ -2050,7 +2060,7 @@ async def _send_sacrifice_menu(message_or_query, p, uid, edit=False):
     move_buttons = [InlineKeyboardButton(MOVES[m]["name"], callback_data=f"sac:{m}") for m in sacrificeable]
     buttons = _rows(move_buttons, 2)
     if len(state["chosen"]) == 1:
-        buttons = [[InlineKeyboardButton("\u2705 Confirm escape", callback_data="sac_confirm")]]
+        buttons = [[InlineKeyboardButton("Confirm escape", callback_data="sac_confirm")]]
     text = f"Sacrifice 1 move to break free. Chosen: {', '.join(MOVES[m]['name'] for m in state['chosen']) or 'none'}"
     if edit:
         await message_or_query.edit_text(text, reply_markup=InlineKeyboardMarkup(buttons))
@@ -2077,15 +2087,15 @@ async def cb_sacrifice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         kidnapper_id = p.pending_kidnap_by
         p.pending_kidnap_by = None
         SAC_PENDING.pop(uid, None)
-        await query.edit_message_text("\u26d3\ufe0f You broke every chain and returned to your tower before dawn.")
+        await query.edit_message_text("You broke every chain and returned to your tower before dawn.")
         if kidnapper_id:
             await context.bot.send_message(
                 kidnapper_id,
-                f"\u26d3\ufe0f {p.name} escaped from your tower using a Healer's Almighty Mulla!",
+                f"{p.name} escaped from your tower using a Healer's Almighty Mulla!",
             )
         await context.bot.send_message(
             game.chat_id,
-            f"\u26d3\ufe0f {p.name} broke every chain and returned to their tower before dawn, using a Healer's Almighty Mulla.",
+            f"{p.name} broke every chain and returned to their tower before dawn, using a Healer's Almighty Mulla.",
         )
         return
 
@@ -2120,7 +2130,7 @@ def _lobby_keyboard(game: Game, bot_username: str, chat_id: int):
     if len(game.players) >= MAX_PLAYERS:
         return None
     url = f"https://t.me/{bot_username}?start={chat_id}"
-    return InlineKeyboardMarkup([[InlineKeyboardButton("🏀 Join", url=url)]])
+    return InlineKeyboardMarkup([[InlineKeyboardButton("Join", url=url)]])
 
 
 # ---------------------------------------------------------------------------
