@@ -606,6 +606,15 @@ async def cmd_cancelgame(update: Update, context: ContextTypes.DEFAULT_TYPE):
             for j in existing:
                 j.schedule_removal()
 
+    try:
+        lid = game.lobby_message_id
+        if lid:
+            await context.bot.edit_message_text(
+                chat_id=chat_id, message_id=lid,
+                text="🛑 Game cancelled by the host.",
+            )
+    except TelegramError:
+        pass
     _cleanup_game(game)
     del GAMES[chat_id]
     await update.message.reply_text("🛑 Game cancelled. Start a fresh one with /newgame.")
